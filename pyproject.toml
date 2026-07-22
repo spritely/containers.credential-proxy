@@ -1,0 +1,20 @@
+[project]
+name = "credential-proxy"
+version = "0.1.0"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "mitmproxy>=12.2.3",
+    "pytest>=9.1.1",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+filterwarnings = [
+    "error",
+    "ignore::Warning:mitmproxy",
+    "ignore::Warning:pyparsing",
+    "ignore::Warning:ldap3",
+]

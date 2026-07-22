@@ -1,0 +1,69 @@
+name: containers-credential-proxy
+
+services:
+  dev:
+    image: docker.io/spritelydev/base-devcontainer:0.6.0@sha256:44d7d5bc1a0449b02e99e61224e61d39c9da133954a26dacb3102459add776a6
+    command: /bin/sh -c "sleep infinity"
+    # Don't start until the proxy is listening (and has generated its CA).
+    depends_on:
+      proxy:
+        condition: service_healthy
+    environment:
+      HTTP_PROXY: http://proxy:8080
+      HTTPS_PROXY: http://proxy:8080
+      NO_PROXY: localhost,127.0.0.1
+      # Node ignores the OS trust store, so point Claude Code at the proxy CA
+      # directly (git/curl/python are covered by post-create's system install).
+      NODE_EXTRA_CA_CERTS: /proxy-ca/mitmproxy-ca-cert.pem
+      # Sentinel credentials — NOT secret. The INJECT=<NAME> marker tells the
+      # proxy which real secret to substitute on the way out.
+      ANTHROPIC_API_KEY: INJECT=ANTHROPIC_API_KEY
+      CLAUDE_CODE_OAUTH_TOKEN: INJECT=CLAUDE_CODE_OAUTH_TOKEN
+      GITHUB_TOKEN: INJECT=GITHUB_TOKEN
+    volumes:
+      - ../:/src
+      # Codex doesn't have environment variables to do this without an
+      # enterprise subscription so map in common auth folder instead
+      - ${HOME:-$USERPROFILE}/.codex:/home/root/.codex
+      # Read-only view of the proxy's certificate authority so the dev container can trust it.
+      - proxy-ca:/proxy-ca:ro
+    env_file:
+      - .env
+
+  # Holds the real credentials and injects them into outbound requests
+  proxy:
+    # Dog-food the container we produce from this repo
+    build:
+      context: ../src
+      dockerfile: Containerfile
+    environment:
+      # host -> secret names the client is allowed to request for that host.
+      # injector.py derives its --allow-hosts intercept list from these hosts too.
+      ALLOWED_SECRETS: |
+        api.anthropic.com=ANTHROPIC_API_KEY,CLAUDE_CODE_OAUTH_TOKEN
+        api.github.com=GITHUB_TOKEN
+    secrets:
+      - ANTHROPIC_API_KEY
+      - CLAUDE_CODE_OAUTH_TOKEN
+      - GITHUB_TOKEN
+    volumes:
+      - proxy-ca:/home/mitmproxy/.mitmproxy
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - "python3 -c 'import socket,sys; s=socket.socket(); s.settimeout(2); sys.exit(s.connect_ex((\"127.0.0.1\",8080)))'"
+      interval: 3s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+secrets:
+  ANTHROPIC_API_KEY:
+    environment: ANTHROPIC_API_KEY
+  CLAUDE_CODE_OAUTH_TOKEN:
+    environment: CLAUDE_CODE_OAUTH_TOKEN
+  GITHUB_TOKEN:
+    environment: GITHUB_TOKEN
+
+volumes:
+  proxy-ca:

@@ -1,0 +1,46 @@
+name: Renovate
+
+on:
+  workflow_dispatch:
+    inputs:
+      renovateVersion:
+        description: The version of Renovate to use. Leave empty to use the latest version.
+        required: false
+        default: ''
+      renovateLogLevel:
+        description: The log level for Renovate.
+        required: false
+        default: info
+        type: choice
+        options:
+          - trace
+          - debug
+          - info
+          - warn
+          - error
+          - fatal
+
+jobs:
+  renovate:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Generate token
+        id: renovate-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ secrets.RENOVATE_APP_ID }}
+          private-key: ${{ secrets.RENOVATE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Renovate
+        uses: renovatebot/github-action@22e0a16091fc706b04affe6ae53d5e3358ac4023 # v46.1.19
+        with:
+          token: ${{ steps.renovate-token.outputs.token }}
+          renovate-version: ${{ inputs.renovateVersion }}
+        env:
+          LOG_LEVEL: ${{ inputs.renovateLogLevel }}
+          RENOVATE_REPOSITORIES: ${{ github.repository }}
+          RENOVATE_ONBOARDING: false

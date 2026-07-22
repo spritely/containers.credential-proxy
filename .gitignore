@@ -1,0 +1,24 @@
+# Environment files
+*.env
+
+# Local files
+.claude/*.local.json
+.templates/*.local.yaml
+
+# Local test and coverage directories
+coverage/
+covered-test-results/
+test-results/
+
+# Python directories
+__pycache__/
+.venv/
+
+# Common local web files
+.pnpm-store/
+.vite/
+dist/
+node_modules/
+
+# Temp files
+temp/

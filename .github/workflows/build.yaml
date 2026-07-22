@@ -1,0 +1,62 @@
+name: Build and Publish Container
+
+on: [push, workflow_dispatch]
+
+permissions:
+    checks: write # Required for test reporting
+    contents: write # Required for pushing tags
+
+jobs:
+  build:
+    # Available runners: https://github.com/actions/runner-images
+    runs-on: ubuntu-26.04
+
+    steps:
+      - id: version
+        name: Get semantic version
+        uses: spritely/actions.semantic-version/get@a1013c4b4c7ae5b90ac5b39cbc37b9214458dad8 # v0.8.30
+        with:
+          writeSummary: true
+
+      - name: Create .env for build
+        shell: bash
+        run: touch ./.devcontainer/.env
+
+      - name: Run tests
+        uses: devcontainers/ci@513af61f4de4f75d37e4438f184ba4358f0fc1ca # v0.3.1900000450
+        env:
+          # These environment variables must exist, even if empty, so the devcontainer's
+          # compose step succeeds when it creates secrets
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ANTHROPIC_API_KEY: ""
+          CLAUDE_CODE_OAUTH_TOKEN: ""
+        with:
+          runCmd: |
+            uv run pytest --junitxml=report.xml
+          push: never
+
+      - name: Generate test report
+        uses: dorny/test-reporter@a43b3a5f7366b97d083190328d2c652e1a8b6aa2 # v3.0.0
+        if: always()
+        with:
+          name: Test Results
+          path: report.xml
+          reporter: java-junit
+
+      - name: Build and publish container
+        uses: spritely/actions.publish-container@007bbddab78d6ace38b0492225f0b03e76a745ff # v0.2.98
+        with:
+          registryUsername: ${{ secrets.DOCKER_HUB_USERNAME }}
+          registryPassword: ${{ secrets.DOCKER_HUB_TOKEN }}
+          registryHost: docker.io
+          context: ./src
+          dockerfile: ./src/Containerfile
+          imageNames: spritelydev/credentials-proxy
+          version: ${{ steps.version.outputs.version }}
+          writeSummary: true
+
+      - name: Apply semantic version
+        if: ${{ steps.version.outputs.branchName == github.event.repository.default_branch }}
+        uses: spritely/actions.semantic-version/apply@a1013c4b4c7ae5b90ac5b39cbc37b9214458dad8 # v0.8.30
+        with:
+          version: ${{ steps.version.outputs.version }}

@@ -1,0 +1,54 @@
+# What is .editorConfig file? See: https://editorconfig.org
+
+###############################
+# Core EditorConfig Options   #
+###############################
+# This is the top-most file - no other .editorConfig files to check
+root = true
+
+# All files
+[*]
+# Default for unix, linux, mac, and git is line feed (lf) - per: https://adaptivepatchwork.com/2012/03/01/mind-the-end-of-your-line/
+# See discussion at https://stackoverflow.com/a/1085586
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+max_line_length = 100
+
+# Tabs can be great, but spaces are much more commonly used
+indent_style = space
+
+# Use 4 space indentation unless overridden for specific types of files
+indent_size = 4
+
+# Files should be UTF-8 encoded unless overridden for specific types of files
+charset = utf-8
+
+[*.{cs,vb}]
+# For best Microsoft interoperability
+# See: https://superuser.com/a/1553672
+charset = utf-8-bom
+
+# XML project files
+[*.{csproj,vbproj,vcxproj,vcxproj.filters,proj,projitems,shproj,slnx}]
+indent_size = 2
+
+# XML config files
+[*.{props,targets,ruleset,config,nuspec,resx,vsixmanifest,vsct}]
+indent_size = 2
+
+# YAML files
+[*.{yml,yaml}]
+indent_size = 2
+
+# JSON files (including JSONC with comments)
+[*.{json,jsonc}]
+indent_size = 2
+
+# Markdown files
+[*.md]
+indent_size = 2
+
+# TypeScript/JavaScript files
+[*.{ts,tsx,js,jsx,mjs,cjs,vue}]
+indent_size = 2

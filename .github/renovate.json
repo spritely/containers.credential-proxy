@@ -1,0 +1,21 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:best-practices"],
+  "description": "Automated dependency updates with automerge",
+  "automerge": true,
+  "platformAutomerge": false,
+  "prHourlyLimit": 0,
+  "rebaseWhen": "behind-base-branch",
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Update ARG versions in Containerfile with renovate comments",
+      "managerFilePatterns": [
+        "/(^|/)Containerfile$/"
+      ],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>[a-z-]+?) depName=(?<depName>[^\\s]+?)(?: extractVersion=(?<extractVersion>[^\\s]+?))?(?: versioning=(?<versioning>[^\\s]+?))?\\s+ARG [A-Z_]+?=(?<currentValue>.+?)\\s"
+      ]
+    }
+  ]
+}
