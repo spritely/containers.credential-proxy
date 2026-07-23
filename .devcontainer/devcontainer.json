@@ -3,7 +3,10 @@
 {
     "name": "containers.credential-proxy",
 
-    "dockerComposeFile": "compose.yaml",
+    // Set environment variable DEVCONTAINER_MODE=dev to layer in the compose.dev.yaml
+    // This adds a proxy to protect credentials when agents are running.
+    // When unset such as on CI, it falls back to the compose.ci.yaml no-op setup.
+    "dockerComposeFile": ["compose.yaml", "compose.${localEnv:DEVCONTAINER_MODE:ci}.yaml"],
     "service": "dev",
     "workspaceFolder": "/src",
     "postCreateCommand": "post-create",

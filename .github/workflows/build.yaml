@@ -24,12 +24,6 @@ jobs:
 
       - name: Run tests
         uses: devcontainers/ci@513af61f4de4f75d37e4438f184ba4358f0fc1ca # v0.3.1900000450
-        env:
-          # These environment variables must exist, even if empty, so the devcontainer's
-          # compose step succeeds when it creates secrets
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ANTHROPIC_API_KEY: ""
-          CLAUDE_CODE_OAUTH_TOKEN: ""
         with:
           runCmd: |
             uv run pytest --junitxml=report.xml

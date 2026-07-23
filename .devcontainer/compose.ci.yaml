@@ -1,0 +1,2 @@
+# Loaded when DEVCONTAINER_MODE is unset such as in CI. Intentionally a no-op.
+services: {}
