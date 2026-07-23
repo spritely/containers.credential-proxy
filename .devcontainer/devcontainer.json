@@ -6,7 +6,6 @@
     "dockerComposeFile": "compose.yaml",
     "service": "dev",
     "workspaceFolder": "/src",
-    "initializeCommand": "(mkdir .devcontainer 2>/dev/null; touch .devcontainer/.env 2>/dev/null) || (mkdir .devcontainer 2> nul & type nul >> .devcontainer/.env 2> nul)",
     "postCreateCommand": "post-create",
 
     // Features to add to the dev container. More info: https://containers.dev/features.

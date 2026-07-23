@@ -2,19 +2,24 @@ name: containers-credential-proxy
 
 services:
   dev:
-    image: docker.io/spritelydev/base-devcontainer:0.6.0@sha256:44d7d5bc1a0449b02e99e61224e61d39c9da133954a26dacb3102459add776a6
+    image: docker.io/spritelydev/base-devcontainer:0.8.0@sha256:c3d7b4499688ea807166f07c9a666cc76865bbfcec8f66b826950a40f9c781b5
     command: /bin/sh -c "sleep infinity"
+    # When running Podman, in order for bind mounts to be editable both inside and outside the
+    # devcontainer, it must either run as `root` or the user id must be translated into the
+    # container properly. Setting userns_mode to "keep-id" tells podman to not shift user ids and
+    # fixes this problem so set environment variable USERNS_MODE=keep-id only if running podman.
+    userns_mode: "${USERNS_MODE:-}"
     # Don't start until the proxy is listening (and has generated its CA).
     depends_on:
-      proxy:
+      credentials-proxy:
         condition: service_healthy
     environment:
-      HTTP_PROXY: http://proxy:8080
-      HTTPS_PROXY: http://proxy:8080
+      HTTP_PROXY: http://credentials-proxy:8080
+      HTTPS_PROXY: http://credentials-proxy:8080
       NO_PROXY: localhost,127.0.0.1
       # Node ignores the OS trust store, so point Claude Code at the proxy CA
       # directly (git/curl/python are covered by post-create's system install).
-      NODE_EXTRA_CA_CERTS: /proxy-ca/mitmproxy-ca-cert.pem
+      NODE_EXTRA_CA_CERTS: /certificate/mitmproxy-ca-cert.pem
       # Sentinel credentials — NOT secret. The INJECT=<NAME> marker tells the
       # proxy which real secret to substitute on the way out.
       ANTHROPIC_API_KEY: INJECT=ANTHROPIC_API_KEY
@@ -24,14 +29,15 @@ services:
       - ../:/src
       # Codex doesn't have environment variables to do this without an
       # enterprise subscription so map in common auth folder instead
-      - ${HOME:-$USERPROFILE}/.codex:/home/root/.codex
+      - ${HOME:-$USERPROFILE}/.codex:/home/dev/.codex
       # Read-only view of the proxy's certificate authority so the dev container can trust it.
-      - proxy-ca:/proxy-ca:ro
+      - credentials-proxy-certificate:/certificate:ro
     env_file:
-      - .env
+      - path: .env
+        required: false
 
   # Holds the real credentials and injects them into outbound requests
-  proxy:
+  credentials-proxy:
     # Dog-food the container we produce from this repo
     build:
       context: ../src
@@ -47,7 +53,7 @@ services:
       - CLAUDE_CODE_OAUTH_TOKEN
       - GITHUB_TOKEN
     volumes:
-      - proxy-ca:/home/mitmproxy/.mitmproxy
+      - credentials-proxy-certificate:/home/mitmproxy/.mitmproxy
     healthcheck:
       test:
         - CMD-SHELL
@@ -66,4 +72,4 @@ secrets:
     environment: GITHUB_TOKEN
 
 volumes:
-  proxy-ca:
+  credentials-proxy-certificate:
