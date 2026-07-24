@@ -20,5 +20,10 @@ __pycache__/
 dist/
 node_modules/
 
+# Dotnet files
+bin/
+obj/
+dotnet/runfile-discovery/
+
 # Temp files
 temp/

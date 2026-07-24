@@ -18,10 +18,6 @@ jobs:
         with:
           writeSummary: true
 
-      - name: Create .env for build
-        shell: bash
-        run: touch ./.devcontainer/.env
-
       - name: Run tests
         uses: devcontainers/ci@513af61f4de4f75d37e4438f184ba4358f0fc1ca # v0.3.1900000450
         with:
