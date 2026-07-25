@@ -1,3 +1,4 @@
+import base64
 import re
 
 import pytest
@@ -11,6 +12,10 @@ def _flow(host, headers):
     for name, value in headers.items():
         flow.request.headers[name] = value
     return flow
+
+
+def _basic(credentials: str) -> str:
+    return "Basic " + base64.b64encode(credentials.encode()).decode()
 
 
 @pytest.fixture(autouse=True)
@@ -131,6 +136,97 @@ class TestRequest:
 
         assert flow.request.headers["Authorization"] == "Bearer real-token"
         assert flow.request.headers["X-Plain"] == "no marker here"
+
+
+class TestRequestBasicAuth:
+    """HTTP Basic base64-encodes credentials, so the INJECT marker never appears
+    literally in the header value. request() must decode, substitute, re-encode,
+    and still fail closed."""
+
+    def test_marker_inside_basic_is_substituted_and_reencoded(self, monkeypatch):
+        monkeypatch.setattr(injector, "ALLOWED_SECRETS", {"api.github.com": {"GITHUB_TOKEN"}})
+        monkeypatch.setattr(injector, "SECRETS", {"GITHUB_TOKEN": "real-token"})
+        flow = _flow(
+            "api.github.com",
+            {"Authorization": _basic("token:INJECT=GITHUB_TOKEN")},
+        )
+
+        with taddons.context(injector):
+            injector.request(flow)
+
+        assert flow.request.headers["Authorization"] == _basic("token:real-token")
+
+    def test_marker_in_username_field_is_substituted(self, monkeypatch):
+        monkeypatch.setattr(injector, "ALLOWED_SECRETS", {"api.github.com": {"GITHUB_TOKEN"}})
+        monkeypatch.setattr(injector, "SECRETS", {"GITHUB_TOKEN": "real-token"})
+        flow = _flow(
+            "api.github.com",
+            {"Authorization": _basic("INJECT=GITHUB_TOKEN:x")},
+        )
+
+        with taddons.context(injector):
+            injector.request(flow)
+
+        assert flow.request.headers["Authorization"] == _basic("real-token:x")
+
+    def test_fail_closed_when_secret_not_in_allowlist(self, monkeypatch):
+        monkeypatch.setattr(injector, "ALLOWED_SECRETS", {"api.github.com": {"OTHER_SECRET"}})
+        monkeypatch.setattr(injector, "SECRETS", {"GITHUB_TOKEN": "real-token"})
+        flow = _flow(
+            "api.github.com",
+            {"Authorization": _basic("token:INJECT=GITHUB_TOKEN")},
+        )
+
+        with taddons.context(injector):
+            injector.request(flow)
+
+        assert "Authorization" not in flow.request.headers
+
+    def test_fail_closed_when_secret_allowed_but_not_mounted(self, monkeypatch):
+        monkeypatch.setattr(injector, "ALLOWED_SECRETS", {"api.github.com": {"GITHUB_TOKEN"}})
+        monkeypatch.setattr(injector, "SECRETS", {})
+        flow = _flow(
+            "api.github.com",
+            {"Authorization": _basic("token:INJECT=GITHUB_TOKEN")},
+        )
+
+        with taddons.context(injector):
+            injector.request(flow)
+
+        assert "Authorization" not in flow.request.headers
+
+    def test_basic_without_marker_is_byte_identical(self, monkeypatch):
+        monkeypatch.setattr(injector, "ALLOWED_SECRETS", {"api.github.com": {"GITHUB_TOKEN"}})
+        monkeypatch.setattr(injector, "SECRETS", {"GITHUB_TOKEN": "real-token"})
+        original = _basic("real-user:real-password")
+        flow = _flow("api.github.com", {"Authorization": original})
+
+        with taddons.context(injector):
+            injector.request(flow)
+
+        assert flow.request.headers["Authorization"] == original
+
+    def test_malformed_base64_falls_back_to_plain_path_untouched(self, monkeypatch):
+        monkeypatch.setattr(injector, "ALLOWED_SECRETS", {"api.github.com": {"GITHUB_TOKEN"}})
+        monkeypatch.setattr(injector, "SECRETS", {"GITHUB_TOKEN": "real-token"})
+        flow = _flow("api.github.com", {"Authorization": "Basic not!base64"})
+
+        with taddons.context(injector):
+            injector.request(flow)
+
+        assert flow.request.headers["Authorization"] == "Basic not!base64"
+
+    def test_basic_marker_that_is_not_valid_base64_gets_plain_substitution(self, monkeypatch):
+        monkeypatch.setattr(injector, "ALLOWED_SECRETS", {"api.github.com": {"GITHUB_TOKEN"}})
+        monkeypatch.setattr(injector, "SECRETS", {"GITHUB_TOKEN": "real-token"})
+        # "INJECT=GITHUB_TOKEN" contains '_', which is not a base64 character, so
+        # _decode_basic bails and the plain text marker path substitutes in place.
+        flow = _flow("api.github.com", {"Authorization": "Basic INJECT=GITHUB_TOKEN"})
+
+        with taddons.context(injector):
+            injector.request(flow)
+
+        assert flow.request.headers["Authorization"] == "Basic real-token"
 
 
 class TestLoad:
