@@ -10,6 +10,7 @@ ALLOWED_SECRETS is configured entirely through the ALLOWED_SECRETS
 environment variable, one "host=SECRET1,SECRET2" mapping per line, so this
 script never needs to change to support a new host or secret.
 """
+import base64
 import logging
 import os
 import re
@@ -53,23 +54,58 @@ def load(_loader: addonmanager.Loader) -> None:
         ctx.options.update(allow_hosts=[rf"^({hosts})(:\d+)?$"])
 
 
+def _substitute(value: str, allowed: set[str], host: str, header: str) -> str | None:
+    """Return `value` with its markers replaced, or None to drop the header.
+
+    A value with no markers comes back unchanged, so callers can compare against
+    the input to decide whether the header is worth rewriting at all.
+    """
+    markers = MARKER.findall(value)
+    if not markers:
+        return value
+    unauthorized = [m for m in markers if m not in allowed or m not in SECRETS]
+    if unauthorized:
+        # Fail closed rather than forward the marker text upstream.
+        logging.warning(
+            f"Dropping header {header!r}: unauthorized or missing secret(s) "
+            f"{', '.join(unauthorized)} for host {host}"
+        )
+        return None
+    return MARKER.sub(lambda m: SECRETS[m.group(1)], value)
+
+
+def _decode_basic(value: str) -> tuple[str, str] | None:
+    """Split "Basic <base64>" into its scheme and the decoded "user:password".
+
+    Basic clients (NuGet, pip, git over HTTPS) base64 their credentials, which
+    hides the marker from a plain text substitution. None means this header is
+    not a decodable Basic credential and should take the plain text path.
+    """
+    scheme, _, encoded = value.partition(" ")
+    encoded = encoded.strip()
+    if scheme.lower() != "basic" or not encoded:
+        return None
+    try:
+        return scheme, base64.b64decode(encoded, validate=True).decode()
+    except ValueError:
+        # binascii.Error (bad base64) and UnicodeDecodeError are both ValueError.
+        return None
+
+
 def request(flow: http.HTTPFlow) -> None:
-    allowed = ALLOWED_SECRETS.get(flow.request.pretty_host)
+    host = flow.request.pretty_host
+    allowed = ALLOWED_SECRETS.get(host)
     if not allowed:
         return
     for name, value in list(flow.request.headers.items()):
-        markers = MARKER.findall(value)
-        if not markers:
-            continue
-        unauthorized = [m for m in markers if m not in allowed or m not in SECRETS]
-        if unauthorized:
-            # Fail closed rather than forward the marker text upstream.
-            logging.warning(
-                f"Dropping header {name!r}: unauthorized or missing secret(s) "
-                f"{', '.join(unauthorized)} for host {flow.request.pretty_host}"
-            )
+        basic = _decode_basic(value)
+        original = basic[1] if basic else value
+        injected = _substitute(original, allowed, host, name)
+        if injected is None:
             del flow.request.headers[name]
-        else:
-            flow.request.headers[name] = MARKER.sub(
-                lambda m: SECRETS[m.group(1)], value
+        elif injected != original:
+            flow.request.headers[name] = (
+                f"{basic[0]} {base64.b64encode(injected.encode()).decode()}"
+                if basic
+                else injected
             )
