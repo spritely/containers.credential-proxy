@@ -6,6 +6,11 @@
   "platformAutomerge": false,
   "prHourlyLimit": 0,
   "rebaseWhen": "behind-base-branch",
+  "minimumReleaseAge": "14 days",
+  "osvVulnerabilityAlerts": true,
+  "vulnerabilityAlerts": {
+    "enabled": true
+  },
   "customManagers": [
     {
       "customType": "regex",
