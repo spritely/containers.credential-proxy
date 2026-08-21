@@ -22,5 +22,26 @@
         "# renovate: datasource=(?<datasource>[a-z-]+?) depName=(?<depName>[^\\s]+?)(?: extractVersion=(?<extractVersion>[^\\s]+?))?(?: versioning=(?<versioning>[^\\s]+?))?\\s+ARG [A-Z_]+?=(?<currentValue>.+?)\\s"
       ]
     }
+  ],
+  "packageRules": [
+    {
+      "matchPackageNames": [
+        "spritely/actions.publish-container",
+        "spritely/actions.publish-nuget",
+        "spritely/actions.semantic-version",
+        "spritely/actions.test-dotnet",
+        "spritely/build",
+        "spritely/deploy",
+        "docker.io/spritelydev/base-devcontainer",
+        "docker.io/spritelydev/core-devcontainer",
+        "docker.io/spritelydev/credentials-proxy",
+        "docker.io/spritelydev/dotnet10-devcontainer",
+        "docker.io/spritelydev/github-actions-runner",
+        "docker.io/spritelydev/node24-devcontainer",
+        "docker.io/spritelydev/pulumi-dotnet10"
+      ],
+      "groupName": "spritely infrastructure",
+      "minimumReleaseAge": "0 days"
+    }
   ]
 }
