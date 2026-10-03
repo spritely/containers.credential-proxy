@@ -2,7 +2,7 @@ name: containers-credential-proxy
 
 services:
   dev:
-    image: docker.io/spritelydev/base-devcontainer:0.9.49@sha256:897505dd47804cf2af47c39098e7bf550d4f823b94eea2fd2edbad7325183988
+    image: docker.io/spritelydev/base-devcontainer:0.9.54@sha256:c43bea9c52cb15f1cfb6fa9cc760d5e3f71f71f37caa317486d1b626ef69356b
     # When running Podman, in order for bind mounts to be editable both inside and outside the
     # devcontainer, it must either run as `root` or the user id must be translated into the
     # container properly. Setting userns_mode to "keep-id" tells podman to not shift user ids and
