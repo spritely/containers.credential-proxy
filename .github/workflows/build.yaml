@@ -20,6 +20,10 @@ jobs:
 
       - name: Run tests
         uses: devcontainers/ci@513af61f4de4f75d37e4438f184ba4358f0fc1ca # v0.3.1900000450
+        # The devcontainers CLI generates its Dockerfile outside the build context, which
+        # newer buildx refuses to read unless the entitlement is granted up front.
+        env:
+          BUILDX_BAKE_ENTITLEMENTS_FS: 0
         with:
           runCmd: |
             uv run pytest --junitxml=report.xml
