@@ -14,7 +14,7 @@ jobs:
     steps:
       - id: version
         name: Get semantic version
-        uses: spritely/actions.semantic-version/get@bab13cb62ab4f3483459a2cca50ca311c9f431e6 # v0.8.74
+        uses: spritely/actions.semantic-version/get@dca56df9b01eb92f2ab536015170ae80c5034270 # v0.8.77
         with:
           writeSummary: true
 
@@ -38,7 +38,7 @@ jobs:
           reporter: java-junit
 
       - name: Build and publish container
-        uses: spritely/actions.publish-container@f0303b18fc5905cef32a728f253cbb30512386a8 # v0.2.139
+        uses: spritely/actions.publish-container@a373530cdd38c3f7ccf9f3bf5616f8ce4da6fb61 # v0.2.142
         with:
           registryUsername: ${{ secrets.DOCKER_HUB_USERNAME }}
           registryPassword: ${{ secrets.DOCKER_HUB_TOKEN }}
@@ -51,6 +51,6 @@ jobs:
 
       - name: Apply semantic version
         if: ${{ steps.version.outputs.branchName == github.event.repository.default_branch }}
-        uses: spritely/actions.semantic-version/apply@bab13cb62ab4f3483459a2cca50ca311c9f431e6 # v0.8.74
+        uses: spritely/actions.semantic-version/apply@dca56df9b01eb92f2ab536015170ae80c5034270 # v0.8.77
         with:
           version: ${{ steps.version.outputs.version }}
